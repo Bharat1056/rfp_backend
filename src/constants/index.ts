@@ -1,44 +1,48 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import dotenv from 'dotenv';
+import { proposalJsonSchema, rfpJsonSchema } from '../types';
 
-export const MODEL_NAME = "gemini-2.0-flash"
+dotenv.config();
+
+export const MODEL_NAME = "gemini-2.0-flash";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-export const model = genAI.getGenerativeModel({
+export const rfpModel = genAI.getGenerativeModel({
   model: MODEL_NAME,
   generationConfig: {
     temperature: 0.1,
     responseMimeType: "application/json",
+    responseSchema: rfpJsonSchema
+  }
+});
+
+export const proposalModel = genAI.getGenerativeModel({
+  model: MODEL_NAME,
+  generationConfig: {
+    temperature: 0.1,
+    responseMimeType: "application/json",
+    responseSchema: proposalJsonSchema
   }
 });
 
 
 export const generateRFPPrompt = (description: string): string => {
   return `You are an expert procurement assistant.
-  Convert the following natural language procurement request into a structured RFP (Request for Proposal) JSON object.
+Convert the following natural language procurement request into a structured RFP (Request for Proposal).
 
-  Request: "${description}"
+Request: "${description}"
 
-  Return a JSON object with this exact structure:
-  {
-    "title": "Short descriptive title for the RFP",
-    "description": "Refined professional description",
-    "items": [
-      {
-        "name": "Name of the item",
-        "qty": 0,
-        "specs": "Technical specifications"
-      }
-    ],
-    "budget": 0,
-    "deliveryDays": 0,
-    "paymentTerms": "Payment terms if mentioned",
-    "warranty": "Warranty requirements if mentioned"
-  }
+Generate a comprehensive RFP with:
+- A clear, concise title
+- Professional description
+- Detailed list of items with specifications
+- Budget estimate (if applicable)
+- Delivery timeline (if applicable)
+- Payment terms (if mentioned)
+- Warranty requirements (if mentioned)
 
-  Note: budget, deliveryDays, paymentTerms, and warranty are optional fields. Only include them if mentioned in the request.
-
-  Return ONLY the JSON object with no additional text.`
+Be specific and professional in your output.`
 }
 
 export const emailTextPrompt = (emailText: string): string => {
@@ -51,6 +55,7 @@ export const emailTextPrompt = (emailText: string): string => {
   {
     "totalPrice": 0,
     "deliveryDays": 0,
+    "paymentTerms": "Payment terms if mentioned",
     "warranty": "Warranty offered",
     "priceBreakdown": [
       {
