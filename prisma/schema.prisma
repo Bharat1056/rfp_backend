@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Rfp {
+  id            String     @id @default(uuid())
+  title         String
+  description   String
+  items         Json
+  budget        Float?
+  deliveryDays  Int?
+  paymentTerms  String?
+  warranty      String?
+  createdAt     DateTime   @default(now())
+  proposals     Proposal[]
+}
+
+model Vendor {
+  id        String     @id @default(uuid())
+  name      String
+  email     String
+  category  String?
+  createdAt DateTime   @default(now())
+  proposals Proposal[]
+}
+
+model Proposal {
+  id          String   @id @default(uuid())
+  vendorId    String
+  rfpId       String
+  rawEmail    String
+  parsedData  Json
+  totalPrice  Float?
+  createdAt   DateTime @default(now())
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  rfp         Rfp      @relation(fields: [rfpId], references: [id])
+}
