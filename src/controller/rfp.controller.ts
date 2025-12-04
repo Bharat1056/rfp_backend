@@ -1,11 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { generateRfpFromDescription, parseProposalFromEmail } from './services/gemini';
-import { sendEmail } from './services/email';
-
-const prisma = new PrismaClient();
-
-// --- RFP Controllers ---
+import { generateRfpFromDescription } from '../services/gemini';
+import { sendRfpEmail } from '../services/email-templates';
+import { prisma } from '../constants';
 
 export const generateRfp = async (req: Request, res: Response) => {
   try {
@@ -83,30 +79,54 @@ export const sendRfpToVendors = async (req: Request, res: Response) => {
       where: { id: { in: vendorIds } }
     });
 
+    // Determine reply-to email (use inbound parse subdomain if configured)
+    const replyToEmail = process.env.SENDGRID_INBOUND_EMAIL || process.env.SENDGRID_FROM_EMAIL || 'noreply@example.com';
+
     const results = [];
     for (const vendor of vendors) {
       try {
-        await sendEmail({
-          to: vendor.email,
-          subject: `RFP: ${rfp.title}`,
-          html: `
-            <h1>Request for Proposal: ${rfp.title}</h1>
-            <p>${rfp.description}</p>
-            <h3>Items:</h3>
-            <pre>${JSON.stringify(rfp.items, null, 2)}</pre>
-            <p>Budget: ${rfp.budget || 'N/A'}</p>
-            <p>Please reply to this email with your proposal.</p>
-          `
+        // Use the professional email template
+        await sendRfpEmail({
+          vendorEmail: vendor.email,
+          vendorName: vendor.name,
+          rfpId: rfp.id,
+          rfpTitle: rfp.title,
+          rfpDescription: rfp.description,
+          items: rfp.items,
+          budget: rfp.budget || undefined,
+          deliveryDays: rfp.deliveryDays || undefined,
+          paymentTerms: rfp.paymentTerms || undefined,
+          warranty: rfp.warranty || undefined,
+          replyToEmail,
         });
-        results.push({ vendorId: vendor.id, status: 'sent' });
-      } catch (err) {
-        results.push({ vendorId: vendor.id, status: 'failed', error: err });
+
+        console.log(`✅ RFP sent to ${vendor.name} (${vendor.email})`);
+        results.push({
+          vendorId: vendor.id,
+          vendorName: vendor.name,
+          vendorEmail: vendor.email,
+          status: 'sent'
+        });
+      } catch (err: any) {
       }
     }
 
-    return res.json({ message: 'Process complete', results });
+    const successCount = results.filter(r => r.status === 'sent').length;
+    const failCount = results.filter(r => r.status === 'failed').length;
+
+    console.log(`📊 RFP sending complete: ${successCount} sent, ${failCount} failed`);
+
+    return res.json({
+      message: 'Process complete',
+      summary: {
+        total: results.length,
+        sent: successCount,
+        failed: failCount,
+      },
+      results
+    });
   } catch (error) {
-    console.error('Error sending emails:', error);
+    console.error('❌ Error sending emails:', error);
     return res.status(500).json({ error: 'Failed to send emails' });
   }
 };
@@ -121,56 +141,5 @@ export const getRfpProposals = async (req: Request, res: Response) => {
     return res.json(proposals);
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch proposals' });
-  }
-};
-
-// --- Vendor Controllers ---
-
-export const createVendor = async (req: Request, res: Response) => {
-  try {
-    const { name, email, category } = req.body;
-    const vendor = await prisma.vendor.create({
-      data: { name, email, category }
-    });
-    return res.status(201).json(vendor);
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to create vendor' });
-  }
-};
-
-export const getAllVendors = async (req: Request, res: Response) => {
-  try {
-    const vendors = await prisma.vendor.findMany({
-      orderBy: { name: 'asc' }
-    });
-    return res.json(vendors);
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to fetch vendors' });
-  }
-};
-
-// --- Inbound Email Stub ---
-
-export const handleInboundEmail = async (req: Request, res: Response) => {
-  try {
-    const { from, subject, text, rfpId, vendorId } = req.body;
-
-    // Parse the email content using Gemini
-    const parsedData = await parseProposalFromEmail(text);
-
-    const proposal = await prisma.proposal.create({
-      data: {
-        rfpId,
-        vendorId,
-        rawEmail: text,
-        parsedData,
-        totalPrice: parsedData.totalPrice || null
-      }
-    });
-
-    return res.status(201).json(proposal);
-  } catch (error) {
-    console.error('Error processing inbound email:', error);
-    return res.status(500).json({ error: 'Failed to process email' });
   }
 };

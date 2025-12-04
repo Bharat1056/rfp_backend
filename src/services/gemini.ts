@@ -1,10 +1,7 @@
-import dotenv from 'dotenv';
 import { ProposalSchema, ProposalType, RfpSchema, RfpType } from "../types/index"
 import {safeParseJson} from "../utils/helper"
 import { emailTextPrompt, generateRFPPrompt, rfpModel, proposalModel } from '../constants';
 import z from 'zod';
-
-dotenv.config();
 
 export const generateRfpFromDescription = async (description: string): Promise<RfpType> => {
   const prompt = generateRFPPrompt(description);

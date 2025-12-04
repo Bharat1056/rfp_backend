@@ -1,8 +1,7 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
-import dotenv from 'dotenv';
 import { proposalJsonSchema, rfpJsonSchema } from '../types';
-
-dotenv.config();
+import multer from 'multer';
+import { PrismaClient } from '@prisma/client';
 
 export const MODEL_NAME = "gemini-2.0-flash";
 
@@ -70,3 +69,14 @@ export const emailTextPrompt = (emailText: string): string => {
 
   Return ONLY the JSON object with no additional text.`
 }
+
+export const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 30 * 1024 * 1024,
+  },
+});
+
+export const parseInboundEmail = upload.any();
+
+export const prisma  = new PrismaClient()

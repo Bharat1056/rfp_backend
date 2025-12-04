@@ -141,3 +141,38 @@ export const proposalJsonSchema: Schema = {
   }
 };
 
+export interface EmailOptions {
+  to: string | string[];
+  subject: string;
+  html: string;
+  text?: string;
+  from?: string;
+  cc?: string | string[];
+  bcc?: string | string[];
+  replyTo?: string;
+  attachments?: Array<{
+    content: string;
+    filename: string;
+    type?: string;
+    disposition?: 'attachment' | 'inline';
+  }>;
+}
+
+export interface InboundEmailPayload {
+  headers: string;
+  dkim: string;
+  to: string;
+  from: string;
+  sender_ip: string;
+  spam_report?: string;
+  envelope: string;
+  subject: string;
+  spam_score?: string;
+  charsets: string;
+  SPF: string;
+  text?: string;
+  html?: string;
+  attachments?: string;
+  'attachment-info'?: string;
+  [key: string]: any;
+}
