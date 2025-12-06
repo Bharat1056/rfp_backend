@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { generateRfpFromDescription } from '../services/gemini';
+import { generateRfpFromDescription, chatWithProcurementAI, generateRfpFromChat } from '../services/gemini';
 import { sendRfpEmail } from '../services/email-templates';
 import { prisma } from '../constants';
 import { RfpStatus } from '@prisma/client';
@@ -15,6 +15,35 @@ export const generateRfp = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error generating RFP:', error);
     return res.status(500).json({ error: 'Failed to generate RFP' });
+  }
+};
+
+export const chatWithAI = async (req: Request, res: Response) => {
+  try {
+    const { history, message } = req.body;
+    if (!message) return res.status(400).json({ error: 'Message is required' });
+
+    // history is array of { role: 'user' | 'model', content: string }
+    const response = await chatWithProcurementAI(history || [], message);
+    return res.json(response);
+  } catch (error) {
+    console.error('Error in chat:', error);
+    return res.status(500).json({ error: 'Failed to process chat message' });
+  }
+};
+
+export const generateRfpFromChatController = async (req: Request, res: Response) => {
+  try {
+    const { history } = req.body;
+    if (!history || !Array.isArray(history)) {
+      return res.status(400).json({ error: 'Chat history is required' });
+    }
+
+    const structuredRfp = await generateRfpFromChat(history);
+    return res.json(structuredRfp);
+  } catch (error) {
+    console.error('Error generating RFP from chat:', error);
+    return res.status(500).json({ error: 'Failed to generate RFP from chat' });
   }
 };
 
