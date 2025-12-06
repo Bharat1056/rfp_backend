@@ -7,6 +7,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum RfpStatus {
+  Pending
+  Closed
+}
+
+enum ProposalStatus {
+  Pending
+  Accepted
+  Rejected
+}
+
 model Rfp {
   id            String     @id @default(uuid())
   title         String
@@ -17,6 +28,7 @@ model Rfp {
   paymentTerms  String?
   warranty      String?
   createdAt     DateTime   @default(now())
+  status        RfpStatus  @default(Pending)
   proposals     Proposal[]
 }
 
@@ -36,6 +48,9 @@ model Proposal {
   rawEmail    String
   parsedData  Json
   totalPrice  Float?
+  status      ProposalStatus @default(Pending)
+  score       Float?
+  aiAnalysis  String?
   createdAt   DateTime @default(now())
   vendor      Vendor   @relation(fields: [vendorId], references: [id])
   rfp         Rfp      @relation(fields: [rfpId], references: [id])

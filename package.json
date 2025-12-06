@@ -6,7 +6,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "tsx src/index.ts",
-    "prod": "node dist/index.js"
+    "prod": "node dist/index.js",
+    "prisma": "npx prisma generate && npx prisma db push"
   },
   "dependencies": {
     "@langchain/core": "^1.1.2",

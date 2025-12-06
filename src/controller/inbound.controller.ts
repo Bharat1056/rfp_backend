@@ -5,6 +5,8 @@ import { prisma } from '../constants';
 export const handleInboundEmail = async (req: Request, res: Response) => {
   try {
     const { from, subject, text, rfpId, vendorId } = req.body;
+    console.log("rfpId: ", rfpId)
+    console.log("vendorId: ", vendorId)
 
     // Parse the email content using Gemini
     const parsedData = await parseProposalFromEmail(text);
@@ -18,6 +20,8 @@ export const handleInboundEmail = async (req: Request, res: Response) => {
         totalPrice: parsedData.totalPrice || null
       }
     });
+
+    console.log("proposal accepted: ", proposal)
 
     return res.status(201).json(proposal);
   } catch (error) {

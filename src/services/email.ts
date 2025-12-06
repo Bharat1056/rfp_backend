@@ -8,7 +8,6 @@ if (!apiKey) {
   sgMail.setApiKey(apiKey);
 }
 
-
 export const sendEmail = async ({
   to,
   subject,

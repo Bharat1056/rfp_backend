@@ -6,6 +6,7 @@ import { sendEmail } from './email';
 export const sendRfpEmail = async (params: {
   vendorEmail: string;
   vendorName: string;
+  vendorId: string;
   rfpId: string;
   rfpTitle: string;
   rfpDescription: string;
@@ -19,6 +20,7 @@ export const sendRfpEmail = async (params: {
   const {
     vendorEmail,
     vendorName,
+    vendorId,
     rfpId,
     rfpTitle,
     rfpDescription,
@@ -35,106 +37,78 @@ export const sendRfpEmail = async (params: {
         .map(
           (item: any, index: number) => `
         <tr>
-          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${index + 1}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.name || item.description || 'N/A'}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.quantity || 'N/A'}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.specifications || 'N/A'}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${index + 1}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${item.name || item.description || 'N/A'}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${item.quantity || 'N/A'}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${item.specifications || 'N/A'}</td>
         </tr>
       `
         )
         .join('')
-    : '<tr><td colspan="4" style="padding: 8px;">No items specified</td></tr>';
+    : '<tr><td colspan="4" style="padding: 10px; border: 1px solid #ddd;">No items specified</td></tr>';
 
   const html = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Request for Proposal</title>
     </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px;">
 
-      <!-- Header -->
-      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-        <h1 style="margin: 0; font-size: 28px;">Request for Proposal</h1>
-        <p style="margin: 10px 0 0 0; opacity: 0.9;">RFP ID: ${rfpId}</p>
+      <div style="border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
+        <h1 style="margin: 0; font-size: 24px; color: #000;">Request for Proposal</h1>
+        <div style="margin-top: 15px; font-size: 14px; color: #555;">
+          <p style="margin: 5px 0;"><strong>RFP Reference:</strong> ${rfpId}</p>
+          <p style="margin: 5px 0;"><strong>Vendor ID:</strong> ${vendorId}</p>
+        </div>
       </div>
 
-      <!-- Content -->
-      <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+      <p style="margin-bottom: 20px;">Dear ${vendorName},</p>
 
-        <!-- Greeting -->
-        <p style="font-size: 16px; margin-bottom: 20px;">Dear ${vendorName},</p>
+      <p style="margin-bottom: 20px;">You are invited to submit a proposal for the following project requirements:</p>
 
-        <p style="font-size: 16px; margin-bottom: 20px;">
-          We are pleased to invite you to submit a proposal for the following project:
+      <div style="background: #f9f9f9; padding: 20px; border: 1px solid #eee; margin-bottom: 30px;">
+        <h2 style="margin: 0 0 10px 0; font-size: 18px; color: #000;">${rfpTitle}</h2>
+        <p style="margin: 0;">${rfpDescription}</p>
+      </div>
+
+      <h3 style="font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 15px; margin-top: 30px;">Required Items</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px;">
+        <thead>
+          <tr style="background: #f0f0f0;">
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd; width: 50px;">#</th>
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Item Description</th>
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd; width: 80px;">Qty</th>
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Specifications</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+
+      <h3 style="font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 15px;">Project Particulars</h3>
+      <div style="margin-bottom: 30px;">
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          ${budget ? `<li style="padding: 5px 0; border-bottom: 1px solid #eee;"><strong>Target Budget:</strong> $${budget.toLocaleString()}</li>` : ''}
+          ${deliveryDays ? `<li style="padding: 5px 0; border-bottom: 1px solid #eee;"><strong>Required Delivery:</strong> ${deliveryDays} days</li>` : ''}
+          ${paymentTerms ? `<li style="padding: 5px 0; border-bottom: 1px solid #eee;"><strong>Payment Terms:</strong> ${paymentTerms}</li>` : ''}
+          ${warranty ? `<li style="padding: 5px 0; border-bottom: 1px solid #eee;"><strong>Warranty:</strong> ${warranty}</li>` : ''}
+        </ul>
+      </div>
+
+      <div style="background: #fff; border: 1px solid #333; padding: 20px; margin-top: 30px;">
+        <h3 style="margin: 0 0 10px 0; font-size: 16px;">Submission Instructions</h3>
+        <p style="margin: 0; font-size: 14px;">
+          Please reply directly to this email with your proposal attached or inline.<br>
+          <strong>IMPORTANT: Do not change the subject line "RFP-${rfpId}" to ensure automatic processing.</strong>
         </p>
-
-        <!-- Project Title -->
-        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #667eea;">
-          <h2 style="margin: 0 0 10px 0; color: #667eea; font-size: 22px;">${rfpTitle}</h2>
-          <p style="margin: 0; color: #6b7280;">${rfpDescription}</p>
-        </div>
-
-        <!-- Items Table -->
-        <h3 style="color: #374151; margin-top: 25px; margin-bottom: 15px; font-size: 18px;">📋 Required Items/Services</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
-          <thead>
-            <tr style="background: #f9fafb;">
-              <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">#</th>
-              <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Item</th>
-              <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Quantity</th>
-              <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Specifications</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
-        </table>
-
-        <!-- Project Details -->
-        <h3 style="color: #374151; margin-top: 25px; margin-bottom: 15px; font-size: 18px;">📊 Project Details</h3>
-        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-          ${budget ? `<p style="margin: 0 0 10px 0;"><strong>Budget:</strong> $${budget.toLocaleString()}</p>` : ''}
-          ${deliveryDays ? `<p style="margin: 0 0 10px 0;"><strong>Delivery Timeline:</strong> ${deliveryDays} days</p>` : ''}
-          ${paymentTerms ? `<p style="margin: 0 0 10px 0;"><strong>Payment Terms:</strong> ${paymentTerms}</p>` : ''}
-          ${warranty ? `<p style="margin: 0;"><strong>Warranty Requirements:</strong> ${warranty}</p>` : ''}
-        </div>
-
-        <!-- Submission Instructions -->
-        <h3 style="color: #374151; margin-top: 25px; margin-bottom: 15px; font-size: 18px;">✉️ How to Submit Your Proposal</h3>
-        <div style="background: #fef3c7; border: 1px solid #fbbf24; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-          <p style="margin: 0 0 10px 0; color: #92400e;">
-            <strong>Important:</strong> Please reply to this email with your proposal.
-          </p>
-          <p style="margin: 0 0 10px 0; color: #92400e;">
-            Make sure to <strong>keep "RFP-${rfpId}"</strong> in the subject line so we can automatically process your proposal.
-          </p>
-          <p style="margin: 0; color: #92400e;">
-            Include your pricing, timeline, and any relevant details in your response.
-          </p>
-        </div>
-
-        <!-- Footer -->
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-          <p style="margin: 0 0 10px 0; color: #6b7280;">
-            If you have any questions, please don't hesitate to reach out.
-          </p>
-          <p style="margin: 0; color: #6b7280;">
-            We look forward to receiving your proposal.
-          </p>
-          <p style="margin: 20px 0 0 0; color: #6b7280;">
-            Best regards,<br>
-            <strong>RFP Manager Team</strong>
-          </p>
-        </div>
       </div>
 
-      <!-- Footer Note -->
-      <div style="text-align: center; margin-top: 20px; color: #9ca3af; font-size: 12px;">
-        <p style="margin: 0;">This is an automated message from RFP Manager</p>
-        <p style="margin: 5px 0 0 0;">Reference ID: ${rfpId}</p>
+      <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; color: #777; font-size: 13px;">
+        <p style="margin: 0;">Best Regards,</p>
+        <p style="margin: 5px 0 0 0; font-weight: bold; color: #333;">Procurement Team</p>
       </div>
     </body>
     </html>
@@ -159,6 +133,7 @@ ${budget ? `Budget: $${budget.toLocaleString()}` : ''}
 ${deliveryDays ? `Delivery Timeline: ${deliveryDays} days` : ''}
 ${paymentTerms ? `Payment Terms: ${paymentTerms}` : ''}
 ${warranty ? `Warranty Requirements: ${warranty}` : ''}
+${vendorId ? `Vendor ID: ${vendorId}` : ''}
 
 HOW TO SUBMIT YOUR PROPOSAL:
 Please reply to this email with your proposal. Make sure to keep "RFP-${rfpId}" in the subject line so we can automatically process your proposal.

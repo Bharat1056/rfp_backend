@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { parseProposalFromEmail } from './gemini';
+import { parseProposalFromEmail, rateProposal } from './gemini';
 import { sendProposalConfirmation } from './email-templates';
-import { InboundEmailPayload } from '../types';
+import { InboundEmailPayload, RfpType } from '../types';
 import { prisma } from '../constants';
 
 const extractEmailMetadata = async (emailData: InboundEmailPayload) => {
@@ -9,12 +9,10 @@ const extractEmailMetadata = async (emailData: InboundEmailPayload) => {
     const toAddress = emailData.to.toLowerCase();
     const fromAddress = emailData.from;
 
-    // Extract email address from "Name <email@domain.com>" format
     const emailRegex = /<([^>]+)>|([^\s]+@[^\s]+)/;
     const fromMatch = fromAddress.match(emailRegex);
     const vendorEmail = fromMatch ? (fromMatch[1] || fromMatch[2]) : fromAddress;
 
-    // Try to find vendor by email
     const vendor = await prisma.vendor.findFirst({
       where: {
         email: {
@@ -24,8 +22,6 @@ const extractEmailMetadata = async (emailData: InboundEmailPayload) => {
       },
     });
 
-    // Extract RFP ID from subject or 'to' address
-    // Example subject: "Re: RFP-{rfpId}: Title" or "Proposal for RFP-{rfpId}"
     const rfpIdMatch = emailData.subject.match(/RFP[:\s-]+([a-zA-Z0-9-]+)/i) ||
                        toAddress.match(/rfp-([a-zA-Z0-9-]+)@/);
 
@@ -51,17 +47,12 @@ export const handleSendGridInbound = async (
   res: Response
 ): Promise<Response> => {
   try {
-    console.log('📧 Received inbound email from SendGrid');
-
-    // SendGrid sends data in req.body after multer processes it
     const emailData = req.body as InboundEmailPayload;
 
-    // Log basic email info
     console.log(`   From: ${emailData.from}`);
     console.log(`   To: ${emailData.to}`);
     console.log(`   Subject: ${emailData.subject}`);
 
-    // Extract metadata
     const { vendor, vendorEmail, rfpId } = await extractEmailMetadata(emailData);
 
     if (!vendor) {
@@ -78,7 +69,6 @@ export const handleSendGridInbound = async (
       });
     }
 
-    // Verify RFP exists
     const rfp = await prisma.rfp.findUnique({
       where: { id: rfpId },
     });
@@ -114,6 +104,9 @@ export const handleSendGridInbound = async (
         rawEmail: emailContent,
         parsedData,
         totalPrice: parsedData.totalPrice || null,
+        status: 'Pending',
+        score: 0,
+        aiAnalysis: 'Pending analysis...',
       },
       include: {
         vendor: true,
@@ -121,13 +114,27 @@ export const handleSendGridInbound = async (
       },
     });
 
+    // Rate the proposal asynchronously (or await if fast enough)
+    try {
+        const rating = await rateProposal(rfp as unknown as RfpType, parsedData);
+        await prisma.proposal.update({
+            where: { id: proposal.id },
+            data: {
+                score: rating.score,
+                aiAnalysis: rating.reason
+            }
+        });
+        console.log(`⭐ Rated proposal: ${rating.score}/100 - ${rating.reason}`);
+    } catch (rateError) {
+        console.error("Failed to rate proposal:", rateError);
+    }
+
     console.log('✅ Proposal created successfully');
     console.log(`   Proposal ID: ${proposal.id}`);
     console.log(`   Vendor: ${vendor.name}`);
     console.log(`   RFP: ${rfp.title}`);
     console.log(`   Total Price: ${parsedData.totalPrice || 'N/A'}`);
 
-    // Send confirmation email to vendor
     try {
       await sendProposalConfirmation({
         vendorEmail: vendor.email,

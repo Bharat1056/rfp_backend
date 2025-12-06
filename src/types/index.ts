@@ -14,7 +14,8 @@ export const RfpSchema = z.object({
   budget: z.number().nullable().optional().describe("Estimated budget if mentioned"),
   deliveryDays: z.number().nullable().optional().describe("Required delivery days if mentioned"),
   paymentTerms: z.string().nullable().optional().describe("Payment terms if mentioned"),
-  warranty: z.string().nullable().optional().describe("Warranty requirements if mentioned")
+  warranty: z.string().nullable().optional().describe("Warranty requirements if mentioned"),
+  status: z.string().default("Pending").describe("Status of the RFP")
 });
 
 export type RfpType = z.infer<typeof RfpSchema>;

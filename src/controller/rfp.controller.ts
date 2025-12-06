@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { generateRfpFromDescription } from '../services/gemini';
 import { sendRfpEmail } from '../services/email-templates';
 import { prisma } from '../constants';
+import { RfpStatus } from '@prisma/client';
 
 export const generateRfp = async (req: Request, res: Response) => {
   try {
@@ -40,11 +41,21 @@ export const createRfp = async (req: Request, res: Response) => {
 
 export const getAllRfps = async (req: Request, res: Response) => {
   try {
+    const { status } = req.query;
+    const where = status ? { status: status as RfpStatus } : {}; // if no status then show all
+
     const rfps = await prisma.rfp.findMany({
-      orderBy: { createdAt: 'desc' }
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        proposals: {
+            select: { id: true }
+        }
+      }
     });
     return res.json(rfps);
   } catch (error) {
+    console.log("err: ", error)
     return res.status(500).json({ error: 'Failed to fetch RFPs' });
   }
 };
@@ -80,7 +91,7 @@ export const sendRfpToVendors = async (req: Request, res: Response) => {
     });
 
     // Determine reply-to email (use inbound parse subdomain if configured)
-    const replyToEmail = process.env.SENDGRID_INBOUND_EMAIL || process.env.SENDGRID_FROM_EMAIL || 'noreply@example.com';
+    const replyToEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@example.com';
 
     const results = [];
     for (const vendor of vendors) {
@@ -89,6 +100,7 @@ export const sendRfpToVendors = async (req: Request, res: Response) => {
         await sendRfpEmail({
           vendorEmail: vendor.email,
           vendorName: vendor.name,
+          vendorId: vendor.id,
           rfpId: rfp.id,
           rfpTitle: rfp.title,
           rfpDescription: rfp.description,
@@ -136,10 +148,75 @@ export const getRfpProposals = async (req: Request, res: Response) => {
     const { id } = req.params;
     const proposals = await prisma.proposal.findMany({
       where: { rfpId: id },
-      include: { vendor: true }
+      include: { vendor: true },
+      orderBy: [
+        { score: 'desc' }, // High score first
+        { totalPrice: 'asc' } // Then low price
+      ]
     });
+
+    // Check RFP status
+    const rfp = await prisma.rfp.findUnique({ where: { id } });
+
+    if (rfp?.status === 'Closed') {
+        // If closed, maybe show only accepted one, or all but allow no actions?
+        // User asked: "in a close RFP we show only that proposal which is accepted"
+        const accepted = proposals.filter(p => p.status === 'Accepted');
+        return res.json(accepted);
+    }
+
     return res.json(proposals);
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch proposals' });
   }
 };
+
+export const confirmProposal = async (req: Request, res: Response) => {
+    try {
+        const { id, proposalId } = req.params; // id is RFP id
+
+        // Transaction to ensure data integrity
+        await prisma.$transaction(async (tx) => {
+            // 1. Mark this proposal as Accepted
+            await tx.proposal.update({
+                where: { id: proposalId },
+                data: { status: 'Accepted' }
+            });
+
+            // 2. Mark all FIRST other proposals for this RFP as Rejected
+            await tx.proposal.updateMany({
+                where: {
+                    rfpId: id,
+                    id: { not: proposalId }
+                },
+                data: { status: 'Rejected' }
+            });
+
+            // 3. Mark RFP as Closed
+            await tx.rfp.update({
+                where: { id },
+                data: { status: 'Closed' }
+            });
+        });
+
+        return res.json({ message: 'Proposal confirmed and RFP closed' });
+    } catch (error) {
+        console.error("Error confirming proposal:", error);
+        return res.status(500).json({ error: 'Failed to confirm proposal' });
+    }
+}
+
+export const rejectProposal = async (req: Request, res: Response) => {
+    try {
+        const { proposalId } = req.params;
+
+        await prisma.proposal.update({
+            where: { id: proposalId },
+            data: { status: 'Rejected' }
+        });
+
+        return res.json({ message: 'Proposal rejected' });
+    } catch (error) {
+        return res.status(500).json({ error: 'Failed to reject proposal' });
+    }
+}

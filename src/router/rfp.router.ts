@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createRfp, generateRfp, getAllRfps, getRfpById, getRfpProposals, sendRfpToVendors } from '../controller/rfp.controller';
+import { createRfp, generateRfp, getAllRfps, getRfpById, getRfpProposals, sendRfpToVendors, confirmProposal, rejectProposal } from '../controller/rfp.controller';
 
 const router = Router()
 
@@ -9,5 +9,7 @@ router.get('/rfps', getAllRfps);
 router.get('/rfps/:id', getRfpById);
 router.post('/rfps/:id/send', sendRfpToVendors);
 router.get('/rfps/:id/proposals', getRfpProposals);
+router.post('/rfps/:id/proposals/:proposalId/confirm', confirmProposal);
+router.post('/rfps/:id/proposals/:proposalId/reject', rejectProposal);
 
 export default router

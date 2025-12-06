@@ -8,7 +8,7 @@ function cleanJsonResponse(text: string): string {
   return cleaned;
 }
 
-export function safeParseJson(text: string): string {
+export function safeParseJson(text: string): any {
   try {
     const cleaned = cleanJsonResponse(text);
     const parsed = JSON.parse(cleaned);
