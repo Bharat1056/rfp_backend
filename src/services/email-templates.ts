@@ -38,9 +38,9 @@ export const sendRfpEmail = async (params: {
           (item: any, index: number) => `
         <tr>
           <td style="padding: 10px; border: 1px solid #ddd;">${index + 1}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${item.name || item.description || 'N/A'}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${item.quantity || 'N/A'}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${item.specifications || 'N/A'}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${item?.name || item?.description || 'N/A'}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${item?.qty || 'N/A'}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${item?.specs || 'N/A'}</td>
         </tr>
       `
         )

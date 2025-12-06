@@ -50,6 +50,7 @@ export const generateRfpFromChatController = async (req: Request, res: Response)
 export const createRfp = async (req: Request, res: Response) => {
   try {
     const { title, description, items, budget, deliveryDays, paymentTerms, warranty } = req.body;
+    console.log("items: ", items)
     const rfp = await prisma.rfp.create({
       data: {
         title,

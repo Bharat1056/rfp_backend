@@ -21,17 +21,17 @@ export const RfpSchema = z.object({
 export type RfpType = z.infer<typeof RfpSchema>;
 
 export const PriceBreakdownItemSchema = z.object({
-  item: z.string().describe("Item name"),
-  unit: z.number().describe("Unit price"),
-  qty: z.number().describe("Quantity")
+  item: z.string().nullable().optional().describe("Item name"),
+  unit: z.number().nullable().optional().describe("Unit price"),
+  qty: z.number().nullable().optional().describe("Quantity")
 });
 
 export const ProposalSchema = z.object({
-  totalPrice: z.number().nullable().optional().describe("Total price quoted"),
-  deliveryDays: z.number().nullable().optional().describe("Delivery timeline in days"),
-  paymentTerms: z.string().nullable().optional().describe("Payment terms if mentioned"),
-  warranty: z.string().nullable().optional().describe("Warranty offered"),
-  priceBreakdown: z.array(PriceBreakdownItemSchema).nullable().optional().describe("Breakdown of prices per item")
+  totalPrice: z.number().describe("Total price quoted"),
+  deliveryDays: z.number().describe("Delivery timeline in days"),
+  paymentTerms: z.string().describe("Payment terms if mentioned"),
+  warranty: z.string().describe("Warranty offered"),
+  priceBreakdown: z.array(PriceBreakdownItemSchema).describe("Breakdown of prices per item")
 });
 
 export type ProposalType = z.infer<typeof ProposalSchema>;
@@ -134,7 +134,7 @@ export const proposalJsonSchema: Schema = {
             description: "Quantity"
           }
         },
-        required: ["item", "unit", "qty"]
+        required: ["item"]
       },
       nullable: true,
       description: "Breakdown of prices per item"
@@ -177,3 +177,53 @@ export interface InboundEmailPayload {
   'attachment-info'?: string;
   [key: string]: any;
 }
+
+export const ProposalRatingSchema = z.object({
+  score: z.number(),
+  reason: z.string(),
+});
+
+export type ProposalRatingType = z.infer<typeof ProposalRatingSchema>;
+
+export const proposalRatingJsonSchema: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    score: {
+      type: SchemaType.NUMBER,
+      description: "Evaluation score from 0 to 100",
+      nullable: false
+    },
+    reason: {
+      type: SchemaType.STRING,
+      description: "Reasoning behind the score",
+      nullable: false
+    }
+  },
+  required: ["score", "reason"]
+};
+
+export const chatResponseJsonSchema: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    message: {
+      type: SchemaType.STRING,
+      description: "The next question or response message",
+      nullable: false
+    },
+    suggestions: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.STRING,
+        description: "Suggested response chip"
+      },
+      description: "List of 3 relevant suggestion chips",
+      nullable: false
+    },
+    readyToGenerate: {
+      type: SchemaType.BOOLEAN,
+      description: "True if all 6 steps are answered securely",
+      nullable: false
+    }
+  },
+  required: ["message", "suggestions", "readyToGenerate"]
+};

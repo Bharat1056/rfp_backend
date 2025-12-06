@@ -49,10 +49,6 @@ export const handleSendGridInbound = async (
   try {
     const emailData = req.body as InboundEmailPayload;
 
-    console.log(`   From: ${emailData.from}`);
-    console.log(`   To: ${emailData.to}`);
-    console.log(`   Subject: ${emailData.subject}`);
-
     const { vendor, vendorEmail, rfpId } = await extractEmailMetadata(emailData);
 
     if (!vendor) {
@@ -114,26 +110,23 @@ export const handleSendGridInbound = async (
       },
     });
 
-    // Rate the proposal asynchronously (or await if fast enough)
     try {
+        console.log("parsed data: ", parsedData)
         const rating = await rateProposal(rfp as unknown as RfpType, parsedData);
+
+        const updates: any = {
+            score: rating.score,
+            aiAnalysis: rating.reason
+        };
+
         await prisma.proposal.update({
             where: { id: proposal.id },
-            data: {
-                score: rating.score,
-                aiAnalysis: rating.reason
-            }
+            data: updates
         });
         console.log(`⭐ Rated proposal: ${rating.score}/100 - ${rating.reason}`);
     } catch (rateError) {
         console.error("Failed to rate proposal:", rateError);
     }
-
-    console.log('✅ Proposal created successfully');
-    console.log(`   Proposal ID: ${proposal.id}`);
-    console.log(`   Vendor: ${vendor.name}`);
-    console.log(`   RFP: ${rfp.title}`);
-    console.log(`   Total Price: ${parsedData.totalPrice || 'N/A'}`);
 
     try {
       await sendProposalConfirmation({
@@ -142,9 +135,9 @@ export const handleSendGridInbound = async (
         rfpTitle: rfp.title,
         proposalId: proposal.id,
       });
-      console.log(`📧 Confirmation email sent to ${vendor.email}`);
+      console.log(`Received email from ${vendor.email}`);
     } catch (emailError) {
-      console.error('❌ Failed to send confirmation email:', emailError);
+      console.error('Failed to send confirmation email:', emailError);
     }
 
     return res.status(200).json({
