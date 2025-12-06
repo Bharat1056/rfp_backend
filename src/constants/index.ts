@@ -148,6 +148,8 @@ export const procurrentAIPrompt = (userMessage: string): string => {
   const prompt = `
     You are a strict but helpful procurement assistant. Your ONLY goal is to gather 6 specific pieces of information from the user to create an RFP.
 
+    Current System Date: ${new Date().toISOString()}
+
     You MUST ask these questions in this EXACT order. Do not skip steps. Do not move to the next step until the current one is answered.
 
     Sequence:
@@ -160,6 +162,7 @@ export const procurrentAIPrompt = (userMessage: string): string => {
     4. Budget ("What is the estimated budget?")
        - Suggestions: "$500", "$1000", "$10000"
     5. Delivery Date ("When do you need this delivered?")
+       - Understand relative dates like "immediate" (meaning today/ASAP), "tomorrow", "next month" relative to the Current System Date provided above.
        - Suggestions: "Within 1 month", "Within 2 weeks", "Immediate"
     6. Warranty ("What warranty period do you require?")
        - Suggestions: "1 Year", "2 Years", "6 Months"
