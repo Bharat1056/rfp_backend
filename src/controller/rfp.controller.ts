@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { generateRfpFromDescription, chatWithProcurementAI, generateRfpFromChat } from '../services/gemini';
-import { sendRfpEmail } from '../services/email-templates';
+import { sendRfpEmail, sendProposalAcceptedEmail } from '../services/email-templates';
 import { prisma } from '../constants';
 import { RfpStatus } from '@prisma/client';
 
@@ -229,6 +229,22 @@ export const confirmProposal = async (req: Request, res: Response) => {
             });
         });
 
+        // 4. Send Email to the Vendor
+        const acceptedProposal = await prisma.proposal.findUnique({
+            where: { id: proposalId },
+            include: { vendor: true, rfp: true }
+        });
+
+        if (acceptedProposal && acceptedProposal.vendor) {
+           await sendProposalAcceptedEmail({
+               vendorEmail: acceptedProposal.vendor.email,
+               vendorName: acceptedProposal.vendor.name,
+               rfpTitle: acceptedProposal.rfp.title,
+               totalPrice: acceptedProposal.totalPrice || 0,
+               proposalDetails: acceptedProposal.parsedData
+           });
+        }
+
         return res.json({ message: 'Proposal confirmed and RFP closed' });
     } catch (error) {
         console.error("Error confirming proposal:", error);
@@ -248,5 +264,26 @@ export const rejectProposal = async (req: Request, res: Response) => {
         return res.json({ message: 'Proposal rejected' });
     } catch (error) {
         return res.status(500).json({ error: 'Failed to reject proposal' });
+    }
+}
+
+export const deleteRfp = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        // Delete related proposals first to avoid Foreign Key constraint errors
+        await prisma.$transaction([
+            prisma.proposal.deleteMany({
+                where: { rfpId: id }
+            }),
+            prisma.rfp.delete({
+                where: { id }
+            })
+        ]);
+
+        return res.json({ message: 'RFP and related proposals deleted successfully' });
+    } catch (error) {
+        console.error("Error deleting RFP:", error);
+        return res.status(500).json({ error: 'Failed to delete RFP' });
     }
 }

@@ -23,3 +23,24 @@ export const getAllVendors = async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'Failed to fetch vendors' });
   }
 };
+
+export const deleteVendor = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Delete related proposals first to avoid Foreign Key constraint errors
+    await prisma.$transaction([
+        prisma.proposal.deleteMany({
+            where: { vendorId: id }
+        }),
+        prisma.vendor.delete({
+            where: { id }
+        })
+    ]);
+
+    return res.json({ message: 'Vendor and related proposals deleted successfully' });
+  } catch (error) {
+    console.error("Error deleting vendor:", error);
+    return res.status(500).json({ error: 'Failed to delete vendor' });
+  }
+};

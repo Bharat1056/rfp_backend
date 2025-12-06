@@ -242,8 +242,39 @@ export const sendProposalAcceptedEmail = async (params: {
   vendorName: string;
   rfpTitle: string;
   totalPrice?: number;
+  proposalDetails?: any;
 }) => {
-  const { vendorEmail, vendorName, rfpTitle, totalPrice } = params;
+  const { vendorEmail, vendorName, rfpTitle, totalPrice, proposalDetails } = params;
+
+  // Generate items table rows if parsedData/items available
+  const items = proposalDetails?.items || proposalDetails?.extractedData?.items || [];
+  const itemsHtml = Array.isArray(items) && items.length > 0
+    ? `
+      <h3 style="font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 15px; margin-top: 20px;">Proposal Details</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
+        <thead>
+          <tr style="background: #f0f0f0;">
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Item</th>
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Specs</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Qty</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Unit Price</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map((item: any) => `
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;">${item.description || item.name || 'N/A'}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${item.specs || item.specification || '-'}</td>
+              <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">${item.qty || item.quantity || 0}</td>
+              <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">${item.unitPrice || 0}</td>
+              <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">${item.totalPrice || 0}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `
+    : '';
 
   const html = `
     <!DOCTYPE html>
@@ -277,6 +308,8 @@ export const sendProposalAcceptedEmail = async (params: {
         `
             : ''
         }
+
+        ${itemsHtml}
 
         <p style="font-size: 16px; margin-bottom: 20px;">
           Our team will contact you shortly to discuss the next steps and finalize the agreement.
