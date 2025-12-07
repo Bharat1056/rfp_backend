@@ -1,51 +1,17 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { proposalJsonSchema, rfpJsonSchema, proposalRatingJsonSchema, chatResponseJsonSchema, ProposalType, RfpType } from '../types';
 import multer from 'multer';
 import { PrismaClient } from '@prisma/client';
 
-export const MODEL_NAME = "gemini-2.0-flash";
+export const MODEL_NAME = "openai/gpt-oss-20b";
 
-export const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-// rfp model is used for generating rfp from natural language
-export const rfpModel = genAI.getGenerativeModel({
-  model: MODEL_NAME,
-  generationConfig: {
-    temperature: 0.1,
-    responseMimeType: "application/json",
-    responseSchema: rfpJsonSchema
-  }
+export const openai = new OpenAI({
+  apiKey: process.env.GROK_API_KEY || '',
+  baseURL: "https://api.groq.com/openai/v1",
 });
 
-// proposal model is used for parsing the proposal email
-export const proposalModel = genAI.getGenerativeModel({
-  model: MODEL_NAME,
-  generationConfig: {
-    temperature: 0.1,
-    responseMimeType: "application/json",
-    responseSchema: proposalJsonSchema
-  }
-});
-
-// rating model is used for rating the proposal
-export const ratingModel = genAI.getGenerativeModel({
-  model: MODEL_NAME,
-  generationConfig: {
-    temperature: 0.1,
-    responseMimeType: "application/json",
-    responseSchema: proposalRatingJsonSchema
-  }
-});
-
-// chat model is used for chat between user and AI
-export const chatModel = genAI.getGenerativeModel({
-  model: MODEL_NAME,
-  generationConfig: {
-    temperature: 1.0, // Higher temp depending on chat creativity, but structure is enforced
-    responseMimeType: "application/json",
-    responseSchema: chatResponseJsonSchema
-  }
-});
+// We no longer export specific model instances like rfpModel, proposalModel etc.
+// The service layer will use the 'openai' client directly.
 
 // generate rfp prompt is used for generating rfp from natural language
 export const generateRFPPrompt = (description: string): string => {
